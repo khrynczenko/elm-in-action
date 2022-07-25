@@ -1,7 +1,19 @@
-port module PhotoGroove exposing (main)
+port module PhotoGroove exposing
+    ( Model
+    , Msg(..)
+    , Photo
+    , Status(..)
+    , initialModel
+    , main
+    , photoDecoder
+    , photoFromUrl
+    , update
+    , urlPrefix
+    , view
+    )
 
 import Browser
-import Html exposing (Attribute, Html, button, div, h1, h3, img, input, label, node, text)
+import Html exposing (Attribute, Html, button, canvas, div, h1, h3, img, input, label, node, text)
 import Html.Attributes as Attr exposing (class, classList, id, name, src, title, type_)
 import Html.Events exposing (..)
 import Http
@@ -9,7 +21,6 @@ import Json.Decode exposing (Decoder, int, string, succeed)
 import Json.Decode.Pipeline as JP
 import Json.Encode as Encode
 import Random
-import Html exposing (canvas)
 
 
 type Status
@@ -25,22 +36,29 @@ type alias Photo =
     }
 
 
-type alias Filters = { hue: Int, ripple: Int, noise: Int }
+type alias Filters =
+    { hue : Int, ripple : Int, noise : Int }
+
 
 type alias FilterOptions =
     { url : String
     , filters : List { name : String, amount : Float }
     }
 
+
 port setFilters : FilterOptions -> Cmd msg
+
+
 port activityChanges : (String -> msg) -> Sub msg
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     activityChanges GotActivity
 
+
 type alias Model =
-    { status : Status, chosenSize : ThumbnailSize, filters: Filters, activity: String}
+    { status : Status, chosenSize : ThumbnailSize, filters : Filters, activity : String }
 
 
 type Msg
@@ -78,11 +96,12 @@ selectUrl url status =
         Errored str ->
             Errored str
 
+
 initialModel : Model
 initialModel =
     { status = Loading
     , chosenSize = Medium
-    , filters = {hue = 0, ripple = 0, noise = 0 }
+    , filters = { hue = 0, ripple = 0, noise = 0 }
     , activity = ""
     }
 
@@ -146,7 +165,7 @@ viewLoaded photos selectedUrl chosenSize filters activity =
     [ h1 [] [ text "Photo Groove" ]
     , button [ onClick ClickedSurpriseMe ]
         [ text "Surprise Me!" ]
-        , div [ class "activity" ] [ text activity ]
+    , div [ class "activity" ] [ text activity ]
     , div [ class "filters" ]
         [ viewFilter "Hue" HueChanged filters.hue
         , viewFilter "Ripple" RippleChanged filters.ripple
@@ -188,41 +207,57 @@ applyFilters model =
             let
                 filters =
                     [ { name = "Hue", amount = toFloat model.filters.hue / 11 }
-                    , { name = "Ripple", amount = toFloat model.filters.ripple / 11}
-                    , { name = "Noise", amount = toFloat model.filters.noise / 11}
+                    , { name = "Ripple", amount = toFloat model.filters.ripple / 11 }
+                    , { name = "Noise", amount = toFloat model.filters.noise / 11 }
                     ]
+
                 url =
                     urlPrefix ++ "large/" ++ selectedUrl
             in
-                ( model, setFilters { url = url, filters = filters } )
+            ( model, setFilters { url = url, filters = filters } )
+
         Loading ->
             ( model, Cmd.none )
+
         Errored _ ->
             ( model, Cmd.none )
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotActivity activity ->
-            ({model | activity = activity }, Cmd.none )
+            ( { model | activity = activity }, Cmd.none )
+
         HueChanged v ->
             let
-                filters  = model.filters
-                newFilters = { filters | hue = v }
+                filters =
+                    model.filters
+
+                newFilters =
+                    { filters | hue = v }
             in
-                applyFilters { model | filters = newFilters }
+            applyFilters { model | filters = newFilters }
+
         RippleChanged v ->
             let
-                filters  = model.filters
-                newFilters = { filters | ripple = v }
+                filters =
+                    model.filters
+
+                newFilters =
+                    { filters | ripple = v }
             in
-                applyFilters { model | filters = newFilters }
+            applyFilters { model | filters = newFilters }
+
         NoiseChanged v ->
             let
-                filters  = model.filters
-                newFilters = { filters | noise = v }
+                filters =
+                    model.filters
+
+                newFilters =
+                    { filters | noise = v }
             in
-                applyFilters { model | filters = newFilters }
+            applyFilters { model | filters = newFilters }
 
         ClickedPhoto selectedUrl ->
             applyFilters { model | status = selectUrl selectedUrl model.status }
@@ -267,25 +302,26 @@ update msg model =
                             applyFilters { model | status = Loaded photos photo.url }
 
 
-photoDecoder2 : Decoder Photo
-photoDecoder2 =
+photoDecoder : Decoder Photo
+photoDecoder =
     succeed Photo
         |> JP.required "url" string
         |> JP.required "size" int
         |> JP.optional "title" string "(untitled)"
 
+
 onSlide : (Int -> msg) -> Attribute msg
 onSlide toMsg =
     Json.Decode.at [ "detail", "userSlidTo" ] int
-    |> Json.Decode.map toMsg
-    |> on "slide"
+        |> Json.Decode.map toMsg
+        |> on "slide"
 
 
 requestPhotos : Cmd Msg
 requestPhotos =
     Http.get
         { url = "http://elm-in-action.com/photos/list.json"
-        , expect = Http.expectJson GotPhotos (Json.Decode.list photoDecoder2)
+        , expect = Http.expectJson GotPhotos (Json.Decode.list photoDecoder)
         }
 
 
@@ -298,10 +334,15 @@ main =
         , subscriptions = subscriptions
         }
 
+
 init : Float -> ( Model, Cmd Msg )
 init flags =
     let
         activity =
             "Initializing Pasta v" ++ String.fromFloat flags
     in
-        ( { initialModel | activity = activity }, requestPhotos )
+    ( { initialModel | activity = activity }, requestPhotos )
+
+photoFromUrl : String -> Photo
+photoFromUrl url =
+    { url = url, size = 0, title = "" }
