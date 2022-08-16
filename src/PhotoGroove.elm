@@ -343,6 +343,7 @@ init flags =
     in
     ( { initialModel | activity = activity }, requestPhotos )
 
+
 photoFromUrl : String -> Photo
 photoFromUrl url =
     { url = url, size = 0, title = "" }
