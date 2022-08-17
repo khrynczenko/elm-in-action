@@ -1,6 +1,6 @@
 format:
 	elm-format --yes src
 build:
-	elm make --debug src/PhotoGroove.elm --output app.js
+	elm make --debug --output=app.js src/Main.elm
 build-folders:
 	elm make --debug src/PhotoFolders.elm --output app.js
